@@ -222,35 +222,34 @@ class OracleObserver(Estimator):
 
 
 class DeadReckoning(Estimator):
-    """Dead reckoning estimator.
-
-    Your task is to implement the update method of this class using only the
-    u attribute and x0. You will need to build a model of the unicycle model
-    with the parameters provided to you in the lab doc. After building the
-    model, use the provided inputs to estimate system state over time.
-
-    The method should closely predict the state evolution if the system is
-    free of noise. You may use this knowledge to verify your implementation.
-
-    Example
-    ----------
-    To run dead reckoning:
-        $ roslaunch proj3_pkg unicycle_bringup.launch \
-            estimator_type:=dead_reckoning \
-            noise_injection:=true \
-            freeze_bearing:=false
-    For debugging, you can simulate a noise-free unicycle model by setting
-    noise_injection:=false.
-    """
     def __init__(self):
         super().__init__()
         self.canvas_title = 'Dead Reckoning'
 
     def update(self, _):
-        if len(self.x_hat) > 0 and self.x_hat[-1][0] < self.x[-1][0]:
-            # TODO: Your implementation goes here!
-            # You may ONLY use self.u and self.x[0] for estimation
-            raise NotImplementedError
+        if len(self.x_hat) == 0:
+            return
+
+        if len(self.u) == 0:
+            return  
+
+        t_last = self.x_hat[-1][0]
+        t_new = self.u[-1][0]
+
+        if t_new <= t_last:
+            return
+
+        phi_prev, x_prev, y_prev, theta_L_prev, theta_R_prev = self.x_hat[-1][1:]
+
+        u_L, u_R = self.u[-1][1], self.u[-1][2]
+
+        phi_new = phi_prev + (-self.r / (2 * self.d) * u_L + self.r / (2 * self.d) * u_R) * self.dt
+        x_new = x_prev + (self.r / 2) * np.cos(phi_prev) * (u_L + u_R) * self.dt
+        y_new = y_prev + (self.r / 2) * np.sin(phi_prev) * (u_L + u_R) * self.dt
+        theta_L_new = theta_L_prev + u_L * self.dt
+        theta_R_new = theta_R_prev + u_R * self.dt
+
+        self.x_hat.append([t_new, phi_new, x_new, y_new, theta_L_new, theta_R_new])
 
 
 class KalmanFilter(Estimator):
