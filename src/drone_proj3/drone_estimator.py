@@ -227,7 +227,7 @@ class DeadReckoning(Estimator):
         phi_new = phi_prev + phi_dot_prev * self.dt
 
         x_dot_new = x_dot_prev - np.sin(phi_prev) * u_1 * self.dt/self.m
-        z_dot_new = z_dot_prev + (self.gr + (np.cos(phi_prev)/self.m) * u_1) * self.dt
+        z_dot_new = z_dot_prev + (-self.gr + (np.cos(phi_prev)/self.m) * u_1) * self.dt
         phi_dot_new = phi_dot_prev + u_2 * self.dt / self.J
 
 
