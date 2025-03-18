@@ -207,10 +207,33 @@ class DeadReckoning(Estimator):
         self.canvas_title = 'Dead Reckoning'
 
     def update(self, _):
-        if len(self.x_hat) > 0:
-            # TODO: Your implementation goes here!
-            # You may ONLY use self.u and self.x[0] for estimation
-            raise NotImplementedError
+        if len(self.x_hat) == 0:
+            return
+
+        if len(self.u) == 0:
+            return
+
+        t_last = self.x_hat[-1][0]
+        t_new = self.u[-1][0]
+
+        if t_new <= t_last:
+            return
+
+        x_prev, z_prev, phi_prev, x_dot_prev, z_dot_prev, phi_dot_prev = self.x_hat[-1]
+
+        u_1, u_2 = self.u[-1][0], self.u[-1][1]
+        x_new = x_prev + x_dot_prev * self.dt
+        z_new = z_prev + z_dot_prev * self.dt
+        phi_new = phi_prev + phi_dot_prev * self.dt
+
+        x_dot_new = x_dot_prev - np.sin(phi_prev) * u_1 * self.dt/self.m
+        z_dot_new = z_dot_prev + (self.gr + (np.cos(phi_prev)/self.m) * u_1) * self.dt
+        phi_dot_new = phi_dot_prev + u_2 * self.dt / self.J
+
+
+
+        self.x_hat.append([x_new, z_new, phi_new, x_dot_new, z_dot_new, phi_dot_new])
+
 
 # noinspection PyPep8Naming
 class ExtendedKalmanFilter(Estimator):

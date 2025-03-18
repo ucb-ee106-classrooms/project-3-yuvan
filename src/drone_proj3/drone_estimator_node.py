@@ -9,7 +9,7 @@ import argparse
 plt.show(block=True)
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--estimator', help='the estimator you want to use')
+parser.add_argument('--estimator', help='the estimator you want to use', default='dr')
 
 def spin(estimator):
     """
