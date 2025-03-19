@@ -213,12 +213,6 @@ class DeadReckoning(Estimator):
         if len(self.u) == 0:
             return
 
-        t_last = self.x_hat[-1][0]
-        t_new = self.u[-1][0]
-
-        if t_new <= t_last:
-            return
-
         x_prev, z_prev, phi_prev, x_dot_prev, z_dot_prev, phi_dot_prev = self.x_hat[-1]
 
         u_1, u_2 = self.u[-1][0], self.u[-1][1]
@@ -229,8 +223,6 @@ class DeadReckoning(Estimator):
         x_dot_new = x_dot_prev - np.sin(phi_prev) * u_1 * self.dt/self.m
         z_dot_new = z_dot_prev + (-self.gr + (np.cos(phi_prev)/self.m) * u_1) * self.dt
         phi_dot_new = phi_dot_prev + u_2 * self.dt / self.J
-
-
 
         self.x_hat.append([x_new, z_new, phi_new, x_dot_new, z_dot_new, phi_dot_new])
 
@@ -266,28 +258,54 @@ class ExtendedKalmanFilter(Estimator):
         self.canvas_title = 'Extended Kalman Filter'
         # TODO: Your implementation goes here!
         # You may define the Q, R, and P matrices below.
-        self.A = None
+        self.A = np.zeros((6, 6))
+        self.A[0, 3] = 1
+        self.A[1, 4] = 1
+        self.A[2, 5] = 1
         self.B = None
-        self.C = None
-        self.Q = None
-        self.R = None
-        self.P = None
+        self.C = np.zeros((2, 6))
+        self.C[1, 2] = 1
+        self.Q = np.eye(6)
+        self.R = np.eye(2)
+        self.P = np.eye(6)
 
-    # noinspection DuplicatedCode
     def update(self, i):
-        if len(self.x_hat) > 0: #and self.x_hat[-1][0] < self.x[-1][0]:
+        if len(self.x_hat) > 0:
             # TODO: Your implementation goes here!
             # You may use self.u, self.y, and self.x[0] for estimation
-            raise NotImplementedError
+            naive_x_hat = self.g(self.x_hat[-1], self.u[-1])
+            self.approx_A(self.x_hat[-1], self.u[-1])
+            conditional_P = self.A @ self.P @ self.A.T + self.Q
+            self.approx_C(naive_x_hat)
+            K = conditional_P @ self.C.T @ np.linalg.inv(self.C @ conditional_P @ self.C.T + self.R)
+            self.x_hat.append(naive_x_hat + K @ (self.y[-1] - self.h(naive_x_hat, self.y[-1])))
+            self.P = (np.eye(6) - K @ self.C) @ conditional_P
+            
+
 
     def g(self, x, u):
-        raise NotImplementedError
+        x_prev, z_prev, phi_prev, x_dot_prev, z_dot_prev, phi_dot_prev = x
+
+        u_1, u_2 = u
+        x_new = x_prev + x_dot_prev * self.dt
+        z_new = z_prev + z_dot_prev * self.dt
+        phi_new = phi_prev + phi_dot_prev * self.dt
+
+        x_dot_new = x_dot_prev - np.sin(phi_prev) * u_1 * self.dt/self.m
+        z_dot_new = z_dot_prev + (-self.gr + (np.cos(phi_prev)/self.m) * u_1) * self.dt
+        phi_dot_new = phi_dot_prev + u_2 * self.dt / self.J
+        return [x_new, z_new, phi_new, x_dot_new, z_dot_new, phi_dot_new]
 
     def h(self, x, y_obs):
-        raise NotImplementedError
+        num_1 = np.sqrt((x[0] - self.landmark[0])**2 + self.landmark[1] ** 2 + (x[1] - self.landmark[2])**2)
+        num_2 = x[2]
+        return np.array([num_1, num_2])
 
     def approx_A(self, x, u):
-        raise NotImplementedError
+        self.A[3, 2] = -np.cos(x[2]) * u[0] / self.m
+        self.A[4, 2] = -np.sin(x[2]) * u[0] / self.m
     
     def approx_C(self, x):
-        raise NotImplementedError
+        denominator = np.sqrt((x[0] - self.landmark[0])**2 + self.landmark[1] ** 2 + (x[1] - self.landmark[2])**2)
+        self.C[0, 0] = (x[0] - self.landmark[0]) / denominator
+        self.C[0, 1] = (x[1] - self.landmark[2]) / denominator
