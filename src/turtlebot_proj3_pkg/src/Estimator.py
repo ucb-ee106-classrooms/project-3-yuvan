@@ -79,12 +79,14 @@ class Estimator:
         self.y = []
         self.x_hat = []  # Your estimates go here!
         self.dt = 0.1
+        self.computation_times = []
         self.fig, self.axd = plt.subplot_mosaic(
             [['xy', 'phi'],
              ['xy', 'x'],
              ['xy', 'y'],
              ['xy', 'thl'],
-             ['xy', 'thr']], figsize=(20.0, 10.0))
+             ['xy', 'thr'],
+             ['xy', 'time']], figsize=(20.0, 12.0))
         self.ln_xy, = self.axd['xy'].plot([], 'o-g', linewidth=2, label='True')
         self.ln_xy_hat, = self.axd['xy'].plot([], 'o-c', label='Estimated')
         self.ln_phi, = self.axd['phi'].plot([], 'o-g', linewidth=2, label='True')
@@ -97,6 +99,10 @@ class Estimator:
         self.ln_thl_hat, = self.axd['thl'].plot([], 'o-c', label='Estimated')
         self.ln_thr, = self.axd['thr'].plot([], 'o-g', linewidth=2, label='True')
         self.ln_thr_hat, = self.axd['thr'].plot([], 'o-c', label='Estimated')
+        self.ln_time, = self.axd['time'].plot([], 'o-m', label='Computation Time')
+        self.axd['time'].set_ylabel('Computation Time (s)')
+        self.axd['time'].set_xlabel('Iteration')
+        self.axd['time'].legend()
         self.canvas_title = 'N/A'
         self.sub_u = rospy.Subscriber('u', Float32MultiArray, self.callback_u)
         self.sub_x = rospy.Subscriber('x', Float32MultiArray, self.callback_x)
@@ -135,7 +141,14 @@ class Estimator:
         self.axd['thr'].set_xlabel('Time (s)')
         self.axd['thr'].legend()
         plt.tight_layout()
-
+    
+    def plot_time(self, ln, data):
+        if len(data):
+            x = list(range(len(data)))
+            ln.set_data(x, data)
+            self.axd['time'].set_xlim([0, max(x) + 1])
+            self.axd['time'].set_ylim([0, max(data) * 1.1])
+            
     def plot_update(self, _):
         self.plot_xyline(self.ln_xy, self.x)
         self.plot_xyline(self.ln_xy_hat, self.x_hat)
@@ -149,6 +162,7 @@ class Estimator:
         self.plot_thlline(self.ln_thl_hat, self.x_hat)
         self.plot_thrline(self.ln_thr, self.x)
         self.plot_thrline(self.ln_thr_hat, self.x_hat)
+        self.plot_time(self.ln_time, self.computation_times)
 
     def plot_xyline(self, ln, data):
         if len(data):
@@ -252,6 +266,7 @@ class DeadReckoning(Estimator):
         theta_R_new = theta_R_prev + u_R * self.dt
 
         self.x_hat.append([t_new, phi_new, x_new, y_new, theta_L_new, theta_R_new])
+        self.computation_times.append(time.time() - start_time)
         print(f"Computation time was {time.time() - start_time}")
 
 
@@ -322,6 +337,7 @@ class KalmanFilter(Estimator):
             self.P = (np.eye(4) - K @ self.C) @ conditional_P
             self.x_hat.append([t_new, self.phid, new_x_hat[0], new_x_hat[1], new_x_hat[2], new_x_hat[3]])
         print(f"Computation time was {time.time() - start_time}")
+        self.computation_times.append(time.time() - start_time)
         print(f"{len(self.x)}")
             
 

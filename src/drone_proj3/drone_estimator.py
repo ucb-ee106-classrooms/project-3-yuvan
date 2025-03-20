@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 plt.rcParams['font.family'] = ['Arial']
 plt.rcParams['font.size'] = 14
-
+import time
 
 class Estimator:
     """A base class to represent an estimator.
@@ -55,12 +55,14 @@ class Estimator:
         self.u = []
         self.x = []
         self.y = []
+        self.computation_times = []
         self.x_hat = []  # Your estimates go here!
         self.t = []
         self.fig, self.axd = plt.subplot_mosaic(
             [['xz', 'phi'],
              ['xz', 'x'],
-             ['xz', 'z']], figsize=(20.0, 10.0))
+             ['xz', 'z'],
+             ['xy', 'time']], figsize=(20.0, 10.0))
         self.ln_xz, = self.axd['xz'].plot([], 'o-g', linewidth=2, label='True')
         self.ln_xz_hat, = self.axd['xz'].plot([], 'o-c', label='Estimated')
         self.ln_phi, = self.axd['phi'].plot([], 'o-g', linewidth=2, label='True')
@@ -69,6 +71,10 @@ class Estimator:
         self.ln_x_hat, = self.axd['x'].plot([], 'o-c', label='Estimated')
         self.ln_z, = self.axd['z'].plot([], 'o-g', linewidth=2, label='True')
         self.ln_z_hat, = self.axd['z'].plot([], 'o-c', label='Estimated')
+        self.ln_time, = self.axd['time'].plot([], 'o-m', label='Computation Time')
+        self.axd['time'].set_ylabel('Computation Time (s)')
+        self.axd['time'].set_xlabel('Iteration')
+        self.axd['time'].legend()
         self.canvas_title = 'N/A'
 
         # Defined in dynamics.py for the dynamics model
@@ -121,6 +127,14 @@ class Estimator:
         self.axd['z'].set_xlabel('t (s)')
         self.axd['z'].legend()
         plt.tight_layout()
+    
+    def plot_time(self, ln, data):
+        if len(data):
+            x = list(range(len(data)))
+            ln.set_data(x, data)
+            self.axd['time'].set_xlim([0, max(x) + 1])
+            self.axd['time'].set_ylim([0, max(data) * 1.1])
+
 
     def plot_update(self, _):
         self.plot_xzline(self.ln_xz, self.x)
@@ -131,6 +145,8 @@ class Estimator:
         self.plot_xline(self.ln_x_hat, self.x_hat)
         self.plot_zline(self.ln_z, self.x)
         self.plot_zline(self.ln_z_hat, self.x_hat)
+        self.plot_time(self.ln_time, self.computation_times)
+
 
     def plot_xzline(self, ln, data):
         if len(data):
@@ -212,6 +228,7 @@ class DeadReckoning(Estimator):
 
         if len(self.u) == 0:
             return
+        start_time = time.time()
 
         x_prev, z_prev, phi_prev, x_dot_prev, z_dot_prev, phi_dot_prev = self.x_hat[-1]
 
@@ -225,6 +242,7 @@ class DeadReckoning(Estimator):
         phi_dot_new = phi_dot_prev + u_2 * self.dt / self.J
 
         self.x_hat.append([x_new, z_new, phi_new, x_dot_new, z_dot_new, phi_dot_new])
+        self.computation_times.append(time.time() - start_time)
 
 
 # noinspection PyPep8Naming
@@ -271,6 +289,7 @@ class ExtendedKalmanFilter(Estimator):
 
     def update(self, i):
         if len(self.x_hat) > 0:
+            start_time = time.time()
             # TODO: Your implementation goes here!
             # You may use self.u, self.y, and self.x[0] for estimation
             naive_x_hat = self.g(self.x_hat[-1], self.u[-1])
@@ -280,6 +299,9 @@ class ExtendedKalmanFilter(Estimator):
             K = conditional_P @ self.C.T @ np.linalg.inv(self.C @ conditional_P @ self.C.T + self.R)
             self.x_hat.append(naive_x_hat + K @ (self.y[-1] - self.h(naive_x_hat, self.y[-1])))
             self.P = (np.eye(6) - K @ self.C) @ conditional_P
+            self.computation_times.append(time.time() - start_time)
+            print(self.computation_times[-1])
+
             
 
 
