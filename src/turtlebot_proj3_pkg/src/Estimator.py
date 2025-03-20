@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 plt.rcParams['font.family'] = ['FreeSans', 'Helvetica', 'Arial']
 plt.rcParams['font.size'] = 14
+import time
 
 
 class Estimator:
@@ -227,6 +228,7 @@ class DeadReckoning(Estimator):
         self.canvas_title = 'Dead Reckoning'
 
     def update(self, _):
+        start_time = time.time()
         if len(self.x_hat) == 0:
             return
 
@@ -250,6 +252,7 @@ class DeadReckoning(Estimator):
         theta_R_new = theta_R_prev + u_R * self.dt
 
         self.x_hat.append([t_new, phi_new, x_new, y_new, theta_L_new, theta_R_new])
+        print(f"Computation time was {time.time() - start_time}")
 
 
 class KalmanFilter(Estimator):
@@ -294,14 +297,32 @@ class KalmanFilter(Estimator):
     # noinspection DuplicatedCode
     # noinspection PyPep8Naming
     def update(self, _):
+        if len(self.x_hat) == 0:
+            return
+
+        if len(self.u) == 0:
+            return  
+
+        t_last = self.x_hat[-1][0]
+        t_new = self.u[-1][0]
+
+        if t_new <= t_last:
+            return
+        
+        start_time = time.time()
         if len(self.x_hat) > 0 and self.x_hat[-1][0] < self.x[-1][0]:
             # TODO: Your implementation goes here!
             # You may use self.u, self.y, and self.x[0] for estimation
-            naive_x_hat = self.A @ self.x_hat[-1] + self.B @ self.u[-1]
+            #breakpoint()
+            t_new = self.u[-1][0]
+            naive_x_hat = self.A @ self.x_hat[-1][2:] + self.B @ self.u[-1][1:] * self.dt
             conditional_P = self.A @ self.P @ self.A.T + self.Q
             K = conditional_P @ self.C.T @ np.linalg.inv(self.C @ conditional_P @ self.C.T + self.R)
-            self.x_hat.append(naive_x_hat + K @ (self.y[-1] - self.C @ naive_x_hat))
+            new_x_hat = naive_x_hat + K @ (self.y[-1][1:] - self.C @ naive_x_hat)
             self.P = (np.eye(4) - K @ self.C) @ conditional_P
+            self.x_hat.append([t_new, self.phid, new_x_hat[0], new_x_hat[1], new_x_hat[2], new_x_hat[3]])
+        print(f"Computation time was {time.time() - start_time}")
+        print(f"{len(self.x)}")
             
 
 
