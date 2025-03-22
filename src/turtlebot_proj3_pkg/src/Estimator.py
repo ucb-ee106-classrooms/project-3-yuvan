@@ -267,7 +267,9 @@ class DeadReckoning(Estimator):
 
         self.x_hat.append([t_new, phi_new, x_new, y_new, theta_L_new, theta_R_new])
         self.computation_times.append(time.time() - start_time)
-        print(f"Computation time was {time.time() - start_time}")
+        print(f"{len(self.x)}")
+        print(f"computation time average is: {sum(self.computation_times)/len(self.computation_times)}")
+        print(f"average error in x_hat vs x is: {np.mean(np.abs(np.array(self.x_hat) - np.array(self.x)), axis=0)}")
 
 
 class KalmanFilter(Estimator):
