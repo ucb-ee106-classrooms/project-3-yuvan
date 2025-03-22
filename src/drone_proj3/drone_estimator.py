@@ -106,6 +106,8 @@ class Estimator:
                 self.x_hat.append(self.x[-1])
             else:
                 self.update(i)
+        print(f"computation time average is: {sum(self.computation_times)/len(self.computation_times)}")
+        print(f"average error in x_hat vs x is: {np.mean(np.abs(np.array(self.x_hat) - np.array(self.x)), axis=0)}")
         return self.x_hat
 
     def update(self, _):
