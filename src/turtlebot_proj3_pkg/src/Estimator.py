@@ -336,9 +336,11 @@ class KalmanFilter(Estimator):
             new_x_hat = naive_x_hat + K @ (self.y[-1][1:] - self.C @ naive_x_hat)
             self.P = (np.eye(4) - K @ self.C) @ conditional_P
             self.x_hat.append([t_new, self.phid, new_x_hat[0], new_x_hat[1], new_x_hat[2], new_x_hat[3]])
-        print(f"Computation time was {time.time() - start_time}")
+        #print(f"Computation time was {time.time() - start_time}")
         self.computation_times.append(time.time() - start_time)
         print(f"{len(self.x)}")
+        print(f"computation time average is: {sum(self.computation_times)/len(self.computation_times)}")
+        print(f"average error in x_hat vs x is: {np.mean(np.abs(np.array(self.x_hat) - np.array(self.x)), axis=0)}")
             
 
 
